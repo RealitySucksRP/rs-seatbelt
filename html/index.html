@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>RS Seatbelt</title>
+  <style>
+    html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:transparent!important;pointer-events:none;user-select:none}
+    /* Fully hidden until the client enters an eligible vehicle unbuckled. */
+    body{display:none}
+    body.show-belt-warning,body.show-editor{display:block}
+    body.show-editor #seatbelt-indicator{display:none}
+    #seatbelt-indicator{
+      position:fixed;right:2.5vw;top:50%;transform:translateY(-50%);
+      width:92px;height:92px;display:flex;align-items:center;justify-content:center;
+      pointer-events:none;border-radius:12px;background:rgba(9,14,22,.25);
+      border:1px solid rgba(121,167,221,.12);
+      box-shadow:0 2px 12px rgba(2,8,20,.07);opacity:.38;
+      animation:seatbelt-pulse 1.45s ease-in-out infinite;
+    }
+    #seatbelt-indicator img{display:block;width:68px;height:68px;object-fit:contain;filter:drop-shadow(0 0 3px rgba(94,153,222,.35))}
+    @keyframes seatbelt-pulse{
+      0%,100%{opacity:.25}
+      50%{opacity:.79}
+    }
+    @media (max-width:900px){#seatbelt-indicator{right:2%;width:84px;height:84px}#seatbelt-indicator img{width:62px;height:62px}}
+    @media (prefers-reduced-motion:reduce){#seatbelt-indicator{animation:none;opacity:.54}}
+    #alignment-editor[hidden]{display:none!important}
+    #alignment-editor{position:fixed;right:3.5vw;top:50%;transform:translateY(-50%);width:338px;
+      max-height:94vh;overflow-y:auto;box-sizing:border-box;padding:20px 20px 18px;
+      border:1px solid rgba(127,164,206,.33);border-radius:14px;pointer-events:auto;color:#e6ebf3;
+      background:linear-gradient(140deg,rgba(24,32,46,.98),rgba(10,16,27,.98));
+      box-shadow:0 18px 58px rgba(0,0,0,.45);font:13px/1.4 system-ui,Segoe UI,Arial,sans-serif;
+    }
+    .align-kicker{color:#92bdf4;font:700 10px/1.4 monospace;letter-spacing:2px}
+    .align-title{margin:5px 0 4px;font-weight:750;font-size:20px;letter-spacing:.2px}
+    .align-description{color:#a4b1c2;font-size:11px;margin-bottom:13px}
+    .align-rule{border:0;border-top:1px solid rgba(160,177,209,.18);margin:12px 0 14px}
+    .align-group-heading{font:700 10px monospace;color:#90c5ff;letter-spacing:1.5px;margin:13px 0 4px}
+    .align-axis{display:block;margin:0 0 8px}
+    .axis-top{display:flex;justify-content:space-between;gap:8px;margin-bottom:4px}
+    .axis-top strong{font-weight:600}.axis-top small{font-size:10px;color:#7f90a5}
+    .axis-line{display:flex;align-items:center;gap:10px}
+    .axis-line input[type=range]{width:100%;height:18px;accent-color:#80b8fb;cursor:pointer}
+    .axis-line output{display:block;text-align:right;min-width:57px;color:#d3eaff;font:11px monospace}
+    .align-btn-row{display:flex;gap:8px;margin:12px 0}
+    .align-btn{flex:1;padding:10px 8px;cursor:pointer;color:#c5d3e4;border-radius:7px;
+      border:1px solid #3a4a60;background:#182638;font:600 11px system-ui}
+    .align-btn:hover{background:#243951}
+    .align-primary{color:#081c31;background:#8dbef8;border:1px solid #a0ceff;font-weight:800}
+    .align-primary:hover{background:#b4d8ff}.align-btn:disabled{cursor:wait;opacity:.55}
+    #align-status{margin:8px 0 0;min-height:27px;color:#a7b9ce;font-size:11px}
+    .align-hint{font-size:10px;color:#7c8ea3}
+    @media (max-height:710px){#alignment-editor{padding:12px 16px}.align-description{margin-bottom:5px}.align-axis{margin-bottom:4px}}
+  
+    #gizmo-layer[hidden]{display:none!important}
+    #gizmo-layer{position:fixed;inset:0;z-index:10;pointer-events:auto}
+    #gizmo-layer canvas{display:block;width:100%;height:100%;background:transparent;touch-action:none}
+    #alignment-editor{z-index:11;right:1.5vw;top:50%;width:min(346px,33vw);max-height:94vh;
+      scrollbar-width:thin;scrollbar-color:#3b526f transparent;padding:14px 17px 12px}
+    #alignment-editor .align-description{margin-bottom:6px}
+    #alignment-editor .align-axis{margin-bottom:6px}
+    #alignment-editor .align-rule{margin:6px 0}
+    #alignment-editor .align-group-heading{margin:9px 0 6px}
+    .align-camera-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-bottom:9px}
+    .align-camera-grid .align-btn{padding:6px 3px;font-size:10px}
+    .align-numeric{width:66px;min-width:0;box-sizing:border-box;padding:5px 3px;background:#0b1724;border:1px solid #394a60;border-radius:5px;color:#d3eaff;font:11px monospace;text-align:right}
+    .align-axis-row{display:grid;grid-template-columns:60px 1fr 66px;align-items:center;gap:7px;margin:5px 0}
+    .align-axis-row label{font-size:11px;color:#c2d4ed}
+    .align-axis-row input[type=range]{width:100%;accent-color:#78bbf5;cursor:pointer}
+    @media(max-width:950px){#alignment-editor{width:min(330px,45vw)}}
+    #alignment-editor{border-radius:8px;background:#10191d;box-shadow:0 14px 40px #0006;letter-spacing:0}
+    #alignment-editor *{letter-spacing:0;box-sizing:border-box}
+    #asset-fields{margin:0;padding:0;border:0;min-width:0}
+    .profile-label{display:block;font-size:11px;color:#bdccce;margin:7px 0 3px}
+    .profile-input,.profile-timing input{width:100%;min-width:0;background:#081012;color:#edf3f3;border:1px solid #3b5156;border-radius:4px;padding:7px;font:11px monospace}
+    .profile-timing{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:5px;font-size:10px;color:#9fb4b8}
+    .profile-timing input{display:block;margin-top:3px}
+    .library-row{display:grid;grid-template-columns:minmax(0,1fr) 44px 53px;gap:4px;margin-top:5px}
+    .library-row .align-btn{padding:5px 2px;font-size:10px;min-width:0}
+    .library-row select{min-width:0;text-overflow:ellipsis}
+    #asset-fields:disabled{opacity:.6}
+    .align-btn{background:#183236;color:#d8e9e9;border-color:#375258}
+    .align-primary{background:#8dd8bf;color:#09231b;border-color:#a6e3d0}
+    #server-save{border-color:#c9ab60;color:#f0d491}
+    #profile-mode{color:#8dd8bf}
+    [hidden]{display:none!important}
+    @media(max-width:600px){#alignment-editor{width:290px;max-width:85vw}}
+  </style>
+</head>
+<body>
+  <div id="seatbelt-indicator" aria-hidden="true"><img src="seatbelt-icon.png" alt=""></div>
+  <div id="gizmo-layer" hidden aria-hidden="true"></div>
+  <section id="alignment-editor" hidden aria-label="Seatbelt Strap Alignment Studio">
+    <div class="align-kicker">REALITYSUCKSRP</div>
+    <h1 class="align-title">RS Seatbelt</h1>
+    <div id="profile-mode" class="align-description"></div>
+    <div class="align-btn-row" role="tablist"><button class="align-btn align-primary" id="tab-assets" role="tab" aria-selected="true">Appearance</button><button class="align-btn" id="tab-fit" role="tab" aria-selected="false">Alignment</button></div>
+    <div id="assets-page">
+    <fieldset id="asset-fields">
+      <label id="library-scope-label" class="profile-label" for="library-scope">Save assets to</label>
+      <select id="library-scope" class="profile-input" aria-label="Asset library save target"><option value="personal">My library</option><option value="server">Server library</option></select>
+      <label class="profile-label" for="profile-model">Prop model</label>
+      <input id="profile-model" class="profile-input" maxlength="100" spellcheck="false">
+      <div class="library-row"><select id="saved-props" class="profile-input" aria-label="Saved props"></select><button class="align-btn" id="save-prop" title="Save this prop to the selected library">Save</button><button class="align-btn" id="remove-prop" title="Remove the selected saved prop">Remove</button></div>
+      <label class="profile-label" for="profile-bone">Attachment bone</label>
+      <input id="profile-bone" class="profile-input" type="number" min="0" max="65535" list="bones">
+      <datalist id="bones"><option value="24817">Chest / Spine 2</option><option value="24818">Upper chest / Spine 3</option><option value="11816">Pelvis</option><option value="57005">Right hand</option><option value="18905">Left hand</option></datalist>
+      <label class="profile-label" for="profile-fasten">Fasten animation</label>
+      <input id="profile-fasten" class="profile-input" maxlength="283" placeholder="dictionary : clip" spellcheck="false">
+      <div class="library-row"><select id="saved-fasten" class="profile-input" aria-label="Saved fasten animations"></select><button class="align-btn" id="save-fasten" title="Save this animation and timing">Save</button><button class="align-btn" id="remove-fasten" title="Remove the selected saved animation">Remove</button></div>
+      <label class="profile-label"><input id="fasten-enabled" type="checkbox" checked> Enable fasten gesture</label>
+      <div class="profile-timing"><label>Duration (ms)<input id="fasten-duration" type="number" min="100" max="5000" step="10"></label><label>Speed<input id="fasten-speed" type="number" min="0.1" max="3" step="0.05"></label></div>
+      <label class="profile-label" for="profile-removal">Unfasten animation</label>
+      <input id="profile-removal" class="profile-input" maxlength="283" placeholder="dictionary : clip" spellcheck="false">
+      <div class="library-row"><select id="saved-removal" class="profile-input" aria-label="Saved unfasten animations"></select><button class="align-btn" id="save-removal" title="Save this animation and timing">Save</button><button class="align-btn" id="remove-removal" title="Remove the selected saved animation">Remove</button></div>
+      <label class="profile-label"><input id="removal-enabled" type="checkbox" checked> Enable unfasten gesture</label>
+      <div class="profile-timing"><label>Duration (ms)<input id="removal-duration" type="number" min="100" max="5000" step="10"></label><label>Speed<input id="removal-speed" type="number" min="0.1" max="3" step="0.05"></label></div>
+    </fieldset>
+    <div class="align-btn-row"><button class="align-btn" id="profile-preview">Preview prop</button><button class="align-btn" id="test-fasten">Test fasten</button><button class="align-btn" id="test-removal">Test unfasten</button></div>
+    </div>
+    <div id="fit-page" hidden>
+    <div class="align-group-heading">TRANSFORM</div>
+    <div class="align-btn-row"><button class="align-btn align-primary" id="gizmo-move">Move · W</button><button class="align-btn" id="gizmo-rotate">Rotate · R</button><button class="align-btn" id="gizmo-space">Local · Q</button></div>
+    <div class="align-btn-row"><button class="align-btn" id="gizmo-fine">Fine 1 mm</button><button class="align-btn" id="gizmo-normal">Normal 1 cm</button></div>
+    <div class="align-group-heading">NUMERIC / PRECISION</div>
+    <div id="alignment-controls"></div>
+    <div class="align-group-heading">CAMERA VIEWS</div>
+    <div class="align-camera-grid">
+      <button class="align-btn" data-camera="front">Front</button><button class="align-btn" data-camera="left">Left</button>
+      <button class="align-btn" data-camera="right">Right</button><button class="align-btn" data-camera="back">Back</button>
+      <button class="align-btn" data-camera="chest">Chest</button><button class="align-btn" data-camera="shoulder">Shoulder</button>
+      <button class="align-btn" data-camera="reset">Reset View</button><button class="align-btn" data-camera="zoom-in">Zoom +</button>
+      <button class="align-btn" data-camera="zoom-out">Zoom −</button><button class="align-btn" data-camera="up">Up</button>
+      <button class="align-btn" data-camera="down">Down</button>
+    </div>
+    </div>
+    <div class="align-btn-row"><button class="align-btn" id="align-reset">Reset calibration</button><button class="align-btn" id="align-revert">Revert</button><button class="align-btn" id="profile-default">Server assets</button></div>
+    <div class="align-btn-row"><button class="align-btn align-primary" id="align-save">Save personal</button><button class="align-btn" id="server-save">Publish default</button></div>
+    <div class="align-btn-row"><button class="align-btn" id="align-close">Cancel</button></div>
+    <div id="align-status" aria-live="polite"></div>
+  </section>
+  <script src="audio.js"></script>
+  <script type="module" src="editor.js"></script>
+</body>
+</html>
