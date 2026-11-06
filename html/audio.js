@@ -1,9 +1,8 @@
 'use strict';
-// FiveM audio + right-center belt reminder icon; no NUI focus or input capture.
+// Optional buckle clicks + belt icon. The warning now uses native GTA audio.
 const sounds = Object.freeze({
   buckle: new Audio('sounds/buckle.wav'),
-  unbuckle: new Audio('sounds/unbuckle.wav'),
-  reminder: new Audio('sounds/reminder.wav')
+  unbuckle: new Audio('sounds/unbuckle.wav')
 });
 
 for (const audio of Object.values(sounds)) {
@@ -29,7 +28,7 @@ window.addEventListener('message', ({ data }) => {
   }
 
   if (data.action === 'stopReminder') {
-    stopSound(sounds.reminder);
+    // Compatibility with older client messages; browser warning playback removed.
     return;
   }
 

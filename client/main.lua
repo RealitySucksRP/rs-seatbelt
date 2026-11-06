@@ -17,6 +17,33 @@ local minSpeeds = {
 -- Native audio: the bank can return false from RequestScriptAudioBank even when
 -- it has loaded. Do not use qbx.loadAudioBank here: its timeout aborts playback.
 local audioBank = 'audiodirectory/seatbelt_sounds'
+local reminderSoundIds = {}
+
+local function stopReminderSound()
+    for _, id in ipairs(reminderSoundIds) do
+        StopSound(id)
+        ReleaseSoundId(id)
+    end
+    reminderSoundIds = {}
+end
+
+-- Use GTA's audio path for the warning, so the game's existing mute-on-focus-
+-- loss setting also silences it. NUI keyboard focus is not game-window focus.
+local function playReminderSound()
+    stopReminderSound()
+    if (tonumber(reminderConfig.volume) or 0.52) <= 0 then return end
+    -- This native cue has no general per-instance volume knob. Reinforce it
+    -- with one optional, simultaneous local voice; never alter global SFX or
+    -- use browser audio. Cap at two voices to keep the boost and ID use bounded.
+    local layers = math.max(1, math.min(2, math.floor(tonumber(reminderConfig.soundLayers) or 1)))
+    for _ = 1, layers do
+        local id = GetSoundId()
+        if not id or id < 0 then break end
+        reminderSoundIds[#reminderSoundIds + 1] = id
+        PlaySoundFrontend(id, reminderConfig.soundName or 'Beep_Red',
+            reminderConfig.soundSet or 'DLC_HEIST_HACKING_SNAKE_SOUNDS', true)
+    end
+end
 
 -- Keep this small bank loaded for the resource lifetime rather than releasing
 -- it before the short buckle/unbuckle sound has finished playing.
@@ -27,6 +54,7 @@ end)
 AddEventHandler('onResourceStop', function(resource)
     if resource == GetCurrentResourceName() then
         BeltVisual.stop()
+        stopReminderSound()
         SendNUIMessage({ action = 'stopAll' })
         ReleaseNamedScriptAudioBank(audioBank)
         playerState.seatbelt, playerState.harness = false, false
@@ -34,16 +62,18 @@ AddEventHandler('onResourceStop', function(resource)
     end
 end)
 
--- Only the playing client hears these NUI sounds. The working GTA audio bank
--- still handles its original buckle/unbuckle sounds as before.
+-- The reminder stays client-local and uses GTA audio; buckle/unbuckle keeps
+-- the existing native bank and optional NUI enhancement.
 local reminderStartAt
 local reminderNextAt
+local reminderSecondAt
 
 local function stopReminder()
+    stopReminderSound()
+    reminderSecondAt = nil
     if reminderStartAt then
         reminderStartAt = nil
         reminderNextAt = nil
-        SendNUIMessage({ action = 'stopReminder' })
     end
 end
 
@@ -70,6 +100,13 @@ local function reminderEligible(vehicle)
 end
 
 local function updateReminder(vehicle)
+    for i = #reminderSoundIds, 1, -1 do
+        local id = reminderSoundIds[i]
+        if HasSoundFinished(id) then
+            ReleaseSoundId(id)
+            table.remove(reminderSoundIds, i)
+        end
+    end
     if not reminderEligible(vehicle) then
         stopReminder()
         return
@@ -82,12 +119,16 @@ local function updateReminder(vehicle)
         return
     end
 
+    if reminderSecondAt and now >= reminderSecondAt then
+        -- Drop an expired second beep after a stalled/background tick; never
+        -- replay a queue of old warnings when the player returns.
+        if now - reminderSecondAt <= 500 then playReminderSound() end
+        reminderSecondAt = nil
+    end
+
     if now >= reminderNextAt then
-        SendNUIMessage({
-            action = 'play',
-            sound = 'reminder',
-            volume = reminderConfig.volume or 0.52
-        })
+        playReminderSound()
+        reminderSecondAt = now + 250
         reminderNextAt = now + math.max(1500, reminderConfig.intervalMs or 7000)
     end
 end

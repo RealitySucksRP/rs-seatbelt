@@ -1,15 +1,5 @@
 # RS Seatbelt: Plug-And-Play Setup
 
-## Windshield ejection setup
-
-RS Seatbelt already calls `SetConvarReplicated` at resource start to enable this native FiveM feature. For clarity or earlier application, you can **also** add this replicated convar to `server.cfg`:
-
-```cfg
-setr game_enableFlyThroughWindscreen true
-```
-
-This enables FiveM's native crash ejection physics. `config/client.lua` adjusts the thresholds for unbuckled, buckled and harness states. Players are **not ejected just because they reach the threshold speed**: a qualifying collision is also required. Verify the feature on your own GTA Legacy/Enhanced builds, vehicle types and seats.
-
 ## Before installing or updating
 
 - Use folder name `rs-seatbelt`. Stop `qbx_seatbelt` and other belt controllers,

@@ -4,7 +4,7 @@ game 'gta5'
 name 'RS Seatbelt'
 author 'RealitySucksRP; derived from Qbox-project/qbx_seatbelt'
 description 'Framework-bridged seatbelt and harness with live personal and server-wide presets'
-version '1.1.1'
+version '1.1.3'
 
 ox_lib 'locale'
 shared_script '@ox_lib/init.lua'

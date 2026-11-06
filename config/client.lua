@@ -55,7 +55,10 @@ return {
         enabled = true,
         delayMs = 3500, -- Time after engine starts / front seat becomes eligible
         intervalMs = 7000, -- Time between two-beep alerts
-        volume = 0.52, -- 0.0-1.0
+        volume = 0.52, -- <=0 disables; native warning loudness follows GTA SFX volume
+        soundName = 'Beep_Red',
+        soundSet = 'DLC_HEIST_HACKING_SNAKE_SOUNDS',
+        soundLayers = 2, -- modest native-only boost; set 1 for the original level
         driversOnly = false, -- false: driver and front passenger
         frontSeatsOnly = true, -- true: no rear-seat reminder
         minSpeed = 0.0 -- MPH if useMPH=true; otherwise km/h (0 means even at idle)
